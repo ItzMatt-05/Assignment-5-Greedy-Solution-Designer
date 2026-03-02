@@ -10,7 +10,6 @@ import time
 # ============================================================================
 # PART 1: PACKAGE PRIORITIZATION (Activity Selection)
 # ============================================================================
-
 def maximize_deliveries(time_windows):
     """
     Schedule the maximum number of deliveries given time window constraints.
@@ -33,17 +32,23 @@ def maximize_deliveries(time_windows):
         ]
         maximize_deliveries(time_windows) returns ['A', 'C']
     """
-    # TODO: Implement greedy algorithm for activity selection
-    # Hint: What greedy choice gives you the most room for future deliveries?
-    # Hint: Think about sorting by a specific attribute
-    
-    pass  # Delete this and write your code
+    if not time_windows:
+        return []
+    windows=sorted(time_windows,key=lambda w:w["end"])
+    selected=[]
+    last_end=None
+    for w in windows:
+        s=w["start"]
+        e=w["end"]
+        if last_end is None or s>=last_end:
+            selected.append(w["delivery_id"])
+            last_end=e
+    return selected
 
 
 # ============================================================================
 # PART 2: TRUCK LOADING (Fractional Knapsack)
 # ============================================================================
-
 def optimize_truck_load(packages, weight_limit):
     """
     Maximize total priority value of packages loaded within weight constraint.
@@ -72,17 +77,43 @@ def optimize_truck_load(packages, weight_limit):
         weight_limit = 50
         optimize_truck_load(packages, 50) returns packages A (full), B (full), C (partial)
     """
-    # TODO: Implement greedy algorithm for fractional knapsack
-    # Hint: What ratio determines which packages are most valuable per pound?
-    # Hint: You can take fractions - if you have 5 lbs capacity left and a 10 lb package, take 0.5 of it
-    
-    pass  # Delete this and write your code
+    if not packages or weight_limit<=0:
+        return {"total_priority":0.0,"total_weight":0.0,"packages":[]}
+    items=[]
+    for p in packages:
+        w=p.get("weight",0)
+        v=p.get("priority",0)
+        if w<=0:
+            continue
+        items.append((v/w,p))
+    items.sort(key=lambda t:t[0],reverse=True)
+    total_priority=0.0
+    total_weight=0.0
+    chosen=[]
+    capacity=float(weight_limit)
+    for ratio,p in items:
+        if total_weight>=capacity:
+            break
+        w=float(p["weight"])
+        v=float(p["priority"])
+        remaining=capacity-total_weight
+        if w<=remaining:
+            chosen.append({"package_id":p["package_id"],"fraction":1.0})
+            total_weight+=w
+            total_priority+=v
+        else:
+            frac=remaining/w
+            if frac>0:
+                chosen.append({"package_id":p["package_id"],"fraction":frac})
+                total_weight+=remaining
+                total_priority+=v*frac
+            break
+    return {"total_priority":total_priority,"total_weight":total_weight,"packages":chosen}
 
 
 # ============================================================================
 # PART 3: DRIVER ASSIGNMENT (Interval Scheduling)
 # ============================================================================
-
 def minimize_drivers(deliveries):
     """
     Assign deliveries to the minimum number of drivers needed.
@@ -108,11 +139,24 @@ def minimize_drivers(deliveries):
         ]
         minimize_drivers(deliveries) returns 2 drivers: [[A, C], [B]]
     """
-    # TODO: Implement greedy algorithm for interval scheduling
-    # Hint: How do you know if a delivery overlaps with another?
-    # Hint: Can you assign a delivery to an existing driver, or do you need a new one?
-    
-    pass  # Delete this and write your code
+    import heapq
+    if not deliveries:
+        return {"num_drivers":0,"assignments":[]}
+    intervals=sorted(deliveries,key=lambda d:d["start"])
+    heap=[]  # (end_time,driver_index)
+    assignments=[]
+    for d in intervals:
+        s=d["start"]
+        e=d["end"]
+        if heap and heap[0][0]<=s:
+            _,idx=heapq.heappop(heap)
+            assignments[idx].append(d["delivery_id"])
+            heapq.heappush(heap,(e,idx))
+        else:
+            idx=len(assignments)
+            assignments.append([d["delivery_id"]])
+            heapq.heappush(heap,(e,idx))
+    return {"num_drivers":len(assignments),"assignments":assignments}
 
 
 # ============================================================================
@@ -295,11 +339,8 @@ if __name__ == "__main__":
     print("GREEDY ALGORITHMS ASSIGNMENT - STARTER CODE")
     print("Implement the greedy functions above, then run tests.\n")
     
-    # Uncomment these as you complete each part:
+    test_package_prioritization()
+    test_truck_loading()
+    test_driver_assignment()
+    benchmark_scenarios()
     
-    # test_package_prioritization()
-    # test_truck_loading()
-    # test_driver_assignment()
-    # benchmark_scenarios()
-    
-    print("\n⚠ Uncomment the test functions in the main block to run tests!")
